@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=NixlyCC
+GenericName=NixlyCC
+Comment=Qt6 Tiling Window Application
+Icon=application-x-executable
+Exec=nixlycc
+Terminal=false
+Categories=Utility;Qt;
+StartupNotify=true
+X-Window-Type=Normal
+X-Window-Tiling=True
