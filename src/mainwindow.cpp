@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle("NixlyCC");
     resize(800, 600);
+    setAttribute(Qt::WA_TranslucentBackground);
 
     auto *central = new QWidget(this);
     auto *mainLayout = new QHBoxLayout(central);
@@ -27,10 +28,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     menuFont.setPointSize(10);
     menu->setFont(menuFont);
     menu->setStyleSheet(
-        "QListWidget { background-color: #121212; color: white; border: none; }"
+        "QListWidget { background-color: rgba(18, 18, 18, 248); color: white; border: none; }"
         "QListWidget::item { padding: 10px; }"
         "QListWidget::item:selected { background-color: #2A2A2A; }"
-        "QListWidget::item:hover { background-color: #1E1E1E; }");
+        "QListWidget::item:hover { background-color: rgba(30, 30, 30, 248); }");
     menu->addItem("System Information");
     menu->addItem("User Settings");
     menu->addItem("Monitors");
@@ -51,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     auto *content = new QWidget;
     content->setAutoFillBackground(true);
     auto pal = content->palette();
-    pal.setColor(QPalette::Window, QColor(26, 26, 26));
+    pal.setColor(QPalette::Window, QColor(26, 26, 26, 235));
     content->setPalette(pal);
 
     auto *stack = new QStackedWidget;

@@ -6,6 +6,7 @@
 #include <QGuiApplication>
 #include <QDir>
 #include <QFile>
+#include <QSaveFile>
 #include <QTextStream>
 #include <QStandardPaths>
 #include <QRegularExpression>
@@ -383,7 +384,9 @@ void MonitorSetupWidget::writeConfig()
     QString path = monitorsConfPath();
     QDir().mkpath(QFileInfo(path).absolutePath());
 
-    QFile file(path);
+    /* Atomic write (temp + rename): nixlytile watches this file with
+     * inotify and must never read a half-written config. */
+    QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 
@@ -403,6 +406,10 @@ void MonitorSetupWidget::writeConfig()
 
         out << "\n";
     }
+
+    out.flush();
+    if (!file.commit())
+        return;
 
     m_configExists = true;
     snapshotSavedState();
