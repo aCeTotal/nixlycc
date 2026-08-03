@@ -190,9 +190,18 @@ void MonitorSetupWidget::enumerateMonitors()
         }
 
         for (int i = 0; i < res->count_connectors; i++) {
-            drmModeConnector *conn = drmModeGetConnector(fd, res->connectors[i]);
+            /* GetConnectorCurrent uses the kernel's cached state instead of
+             * forcing a re-probe, which can block for seconds per connector. */
+            drmModeConnector *conn = drmModeGetConnectorCurrent(fd, res->connectors[i]);
             if (!conn)
                 continue;
+            if (conn->connection == DRM_MODE_CONNECTED && conn->count_modes == 0) {
+                /* Cached state has no modes; do a full probe for this one. */
+                drmModeFreeConnector(conn);
+                conn = drmModeGetConnector(fd, res->connectors[i]);
+                if (!conn)
+                    continue;
+            }
 
             if (conn->connection == DRM_MODE_CONNECTED && conn->count_modes > 0) {
                 MonitorEntry entry;
