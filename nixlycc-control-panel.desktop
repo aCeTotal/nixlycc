@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Settings
-GenericName=Control Panel
+Name=Control Panel
+GenericName=Settings
 Comment=NixlyCC - Control Center for NixlyOS
 Icon=preferences-system
 Exec=nixlycc

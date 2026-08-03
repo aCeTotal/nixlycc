@@ -7,5 +7,5 @@ class QStackedWidget;
 class MainWindow : public QMainWindow
 {
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(const QString &page = QString(), QWidget *parent = nullptr);
 };

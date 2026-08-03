@@ -1,13 +1,13 @@
 [Desktop Entry]
 Type=Application
-Name=Settings
-GenericName=Control Panel
-Comment=NixlyCC - Control Center for NixlyOS
+Name=Monitors
+GenericName=Display Settings
+Comment=Configure monitors in NixlyCC
 Icon=preferences-system
-Exec=nixlycc
+Exec=nixlycc --page monitors
 Terminal=false
 Categories=Settings;Qt;
-Keywords=settings;control panel;nixlycc;
+Keywords=monitors;display;screen;
 StartupNotify=true
 X-Window-Type=Normal
 X-Window-Tiling=True

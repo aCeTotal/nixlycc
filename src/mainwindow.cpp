@@ -6,7 +6,7 @@
 #include <QStackedWidget>
 #include <QFont>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle("NixlyCC");
     resize(800, 600);
@@ -77,6 +77,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     connect(menu, &QListWidget::currentRowChanged, stack, &QStackedWidget::setCurrentIndex);
     menu->setCurrentRow(0);
+
+    if (!page.isEmpty()) {
+        for (int i = 0; i < menu->count(); ++i) {
+            if (menu->item(i)->text().contains(page, Qt::CaseInsensitive)) {
+                menu->setCurrentRow(i);
+                break;
+            }
+        }
+    }
 
     mainLayout->addWidget(sidebar);
     mainLayout->addWidget(content, 1);
