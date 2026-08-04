@@ -27,6 +27,7 @@
             pkgs.qt6.qtbase
             pkgs.qt6.qtwayland
             pkgs.libdrm
+            pkgs.hwdata
           ];
         };
       }

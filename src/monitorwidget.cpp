@@ -106,40 +106,8 @@ MonitorSetupWidget::MonitorSetupWidget(QWidget *parent)
     setMouseTracking(true);
     setMinimumSize(400, 300);
 
-    connect(&m_animTimer, &QTimer::timeout, this, [this]() {
-        bool still_moving = false;
-        float ease = 0.25f;
-
-        for (int i = 0; i < (int)m_entries.size(); i++) {
-            if (i == m_dragging)
-                continue;
-
-            auto &e = m_entries[i];
-            float dx = e.target_x - e.anim_x;
-            float dy = e.target_y - e.anim_y;
-
-            if (std::fabs(dx) > 0.5f) { e.anim_x += dx * ease; still_moving = true; }
-            else e.anim_x = e.target_x;
-
-            if (std::fabs(dy) > 0.5f) { e.anim_y += dy * ease; still_moving = true; }
-            else e.anim_y = e.target_y;
-
-            float dw = e.target_w - e.anim_w;
-            float dh = e.target_h - e.anim_h;
-
-            if (std::fabs(dw) > 0.5f) { e.anim_w += dw * ease; still_moving = true; }
-            else e.anim_w = e.target_w;
-
-            if (std::fabs(dh) > 0.5f) { e.anim_h += dh * ease; still_moving = true; }
-            else e.anim_h = e.target_h;
-        }
-
-        if (!still_moving) {
-            m_animTimer.stop();
-            m_animating = false;
-        }
-        update();
-    });
+    m_animTimer.setTimerType(Qt::PreciseTimer);
+    connect(&m_animTimer, &QTimer::timeout, this, [this]() { animationStep(); });
 
     enumerateMonitors();
     m_configExists = QFile::exists(monitorsConfPath());
@@ -490,9 +458,11 @@ void MonitorSetupWidget::computeBoxLayout()
     int popup_w = width();
     int popup_h = height();
 
-    /* Scale padding/spacing with widget size */
-    int padding = std::max(20, popup_w / 25);
-    int spacing = std::max(12, popup_w / 50);
+    /* Scale padding/spacing with widget size; padding guarantees a clear
+     * gap between the outermost boxes and the widget edges. */
+    int padding = std::max(40, popup_w / 14);
+    int spacing = std::max(16, popup_w / 40);
+    m_spacing = spacing;
     int button_area_h = 50;
     int avail_w = popup_w - 2 * padding;
     int avail_h = popup_h - button_area_h - 2 * padding;
@@ -506,13 +476,14 @@ void MonitorSetupWidget::computeBoxLayout()
     m_gridCols = max_col + 1;
     m_gridRows = max_row + 1;
 
-    /* Cell size fills available space, capped to keep boxes compact */
+    /* Cell size fills available space, capped so boxes stay reasonable
+     * on very wide windows */
     int cell_w = (avail_w - (m_gridCols - 1) * spacing) / m_gridCols;
     int cell_h = (avail_h - (m_gridRows - 1) * spacing) / m_gridRows;
-    if (cell_w > 200) cell_w = 200;
-    if (cell_h > 140) cell_h = 140;
-    if (cell_w < 70) cell_w = 70;
-    if (cell_h < 50) cell_h = 50;
+    if (cell_w > 340) cell_w = 340;
+    if (cell_h > 220) cell_h = 220;
+    if (cell_w < 100) cell_w = 100;
+    if (cell_h < 70) cell_h = 70;
 
     m_cellW = cell_w;
     m_cellH = cell_h;
@@ -557,12 +528,46 @@ void MonitorSetupWidget::computeBoxLayout()
 
 /* ── Animation ───────────────────────────────────────────────────── */
 
+void MonitorSetupWidget::animationStep()
+{
+    bool still_moving = false;
+    const float ease = 0.45f;
+
+    for (int i = 0; i < (int)m_entries.size(); i++) {
+        if (i == m_dragging)
+            continue;
+
+        auto &e = m_entries[i];
+        float d[4] = {e.target_x - e.anim_x, e.target_y - e.anim_y,
+                      e.target_w - e.anim_w, e.target_h - e.anim_h};
+        float *v[4] = {&e.anim_x, &e.anim_y, &e.anim_w, &e.anim_h};
+        const float t[4] = {e.target_x, e.target_y, e.target_w, e.target_h};
+
+        for (int k = 0; k < 4; k++) {
+            if (std::fabs(d[k]) > 1.0f) {
+                *v[k] += d[k] * ease;
+                still_moving = true;
+            } else {
+                *v[k] = t[k];
+            }
+        }
+    }
+
+    if (!still_moving) {
+        m_animTimer.stop();
+        m_animating = false;
+    }
+    update();
+}
+
 void MonitorSetupWidget::startAnimation()
 {
     if (!m_animating) {
         m_animating = true;
         m_animTimer.start(16);
     }
+    /* First step immediately — no waiting for the first timer tick. */
+    animationStep();
 }
 
 /* ── Saved state / dirty checking ─────────────────────────────────── */
@@ -809,7 +814,7 @@ void MonitorSetupWidget::paintEvent(QPaintEvent *)
 
     /* Drop indicator */
     if (m_dragging >= 0) {
-        int spacing = 20;
+        int spacing = m_spacing;
         int cell_step_x = m_cellW + spacing;
         int cell_step_y = m_cellH + spacing;
 
@@ -861,9 +866,11 @@ void MonitorSetupWidget::paintEvent(QPaintEvent *)
         p.setPen(QPen(bordColor, 2));
         p.drawRoundedRect(boxRect, 6, 6);
 
-        /* Labels — only draw if box is wide enough to fit text */
-        QFont font("sans-serif", 11);
-        QFont smallFont("sans-serif", 9);
+        /* Labels — sized from box height, only drawn if they fit */
+        const int mainPt = std::clamp(bh / 9, 12, 18);
+        const int smallPt = std::clamp(bh / 14, 10, 14);
+        QFont font("sans-serif", mainPt);
+        QFont smallFont("sans-serif", smallPt);
 
         /* Make #N (XXHz) — upper area */
         QString line1 = QString("%1 (%2Hz)").arg(gridMakeLabel(i)).arg((int)e.refresh);
@@ -969,7 +976,7 @@ void MonitorSetupWidget::mouseMoveEvent(QMouseEvent *event)
     int ly = event->pos().y();
     int di = m_dragging;
     auto &e = m_entries[di];
-    int spacing = 20;
+    int spacing = m_spacing;
     int cell_step_x = m_cellW + spacing;
     int cell_step_y = m_cellH + spacing;
 

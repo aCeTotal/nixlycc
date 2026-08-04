@@ -57,6 +57,7 @@ private:
     void writeConfig();
     void compactGrid();
     void computeBoxLayout();
+    void animationStep();
     void startAnimation();
     void snapshotSavedState();
     bool hasUnsavedChanges() const;
@@ -84,6 +85,7 @@ private:
     int m_gridCols = 0, m_gridRows = 0;
     int m_cellW = 0, m_cellH = 0;
     int m_gridOriginX = 0, m_gridOriginY = 0;
+    int m_spacing = 20;
 
     /* Drag state */
     int m_dragging = -1;
