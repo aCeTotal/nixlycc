@@ -13,6 +13,10 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
     setAttribute(Qt::WA_TranslucentBackground);
 
     auto *central = new QWidget(this);
+    central->setAutoFillBackground(true);
+    auto centralPal = central->palette();
+    centralPal.setColor(QPalette::Window, QColor(18, 18, 18, 235));
+    central->setPalette(centralPal);
     auto *mainLayout = new QHBoxLayout(central);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
@@ -28,10 +32,10 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
     menuFont.setPointSize(10);
     menu->setFont(menuFont);
     menu->setStyleSheet(
-        "QListWidget { background-color: rgba(18, 18, 18, 248); color: white; border: none; }"
+        "QListWidget { background-color: transparent; color: white; border: none; }"
         "QListWidget::item { padding: 10px; }"
-        "QListWidget::item:selected { background-color: #2A2A2A; }"
-        "QListWidget::item:hover { background-color: rgba(30, 30, 30, 248); }");
+        "QListWidget::item:selected { background-color: rgba(102, 179, 255, 90); }"
+        "QListWidget::item:hover { background-color: rgba(255, 255, 255, 45); }");
     menu->addItem("System Information");
     menu->addItem("User Settings");
     menu->addItem("Monitors");
@@ -50,10 +54,6 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
 
     /* Content area */
     auto *content = new QWidget;
-    content->setAutoFillBackground(true);
-    auto pal = content->palette();
-    pal.setColor(QPalette::Window, QColor(26, 26, 26, 235));
-    content->setPalette(pal);
 
     auto *stack = new QStackedWidget;
     stack->addWidget(createSysInfoPage());

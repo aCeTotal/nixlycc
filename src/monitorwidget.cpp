@@ -458,9 +458,9 @@ void MonitorSetupWidget::computeBoxLayout()
     int popup_w = width();
     int popup_h = height();
 
-    /* Scale padding/spacing with widget size; padding guarantees a clear
-     * gap between the outermost boxes and the widget edges. */
-    int padding = std::max(40, popup_w / 14);
+    /* The reserved drop columns (see below) provide the gap to the widget
+     * edges, so padding only needs to be a small margin. */
+    int padding = 20;
     int spacing = std::max(16, popup_w / 40);
     m_spacing = spacing;
     int button_area_h = 50;
@@ -476,14 +476,20 @@ void MonitorSetupWidget::computeBoxLayout()
     m_gridCols = max_col + 1;
     m_gridRows = max_row + 1;
 
-    /* Cell size fills available space, capped so boxes stay reasonable
-     * on very wide windows */
-    int cell_w = (avail_w - (m_gridCols - 1) * spacing) / m_gridCols;
-    int cell_h = (avail_h - (m_gridRows - 1) * spacing) / m_gridRows;
+    /* Cell width is derived from the total width so 1.5 empty cells fit on
+     * each side of the grid: a grabbed box always has more than a full cell
+     * of room to be dropped left of the first and right of the last box. */
+    float slot_cols = (float)m_gridCols + 3.0f;
+    int cell_w = (int)((avail_w - (m_gridCols + 1) * spacing) / slot_cols);
     if (cell_w > 340) cell_w = 340;
-    if (cell_h > 220) cell_h = 220;
-    if (cell_w < 100) cell_w = 100;
-    if (cell_h < 70) cell_h = 70;
+    if (cell_w < 60) cell_w = 60;
+
+    /* Height follows the width so boxes keep a monitor-like shape, then is
+     * capped by what the available height can actually fit. */
+    int cell_h = (avail_h - (m_gridRows - 1) * spacing) / m_gridRows;
+    int cell_h_from_w = (int)(cell_w * 0.62f);
+    if (cell_h > cell_h_from_w) cell_h = cell_h_from_w;
+    if (cell_h < 50) cell_h = 50;
 
     m_cellW = cell_w;
     m_cellH = cell_h;
@@ -802,9 +808,6 @@ void MonitorSetupWidget::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
-    /* Background */
-    p.fillRect(rect(), QColor(30, 30, 36));
-
     if (m_entries.empty()) {
         p.setPen(QColor(180, 180, 180));
         p.setFont(QFont("sans-serif", 14));
@@ -855,8 +858,8 @@ void MonitorSetupWidget::paintEvent(QPaintEvent *)
 
         QRect boxRect(bx, by, bw, bh);
 
-        /* Background */
-        p.setBrush(QColor(46, 51, 56));
+        /* Background — translucent so the window background shows through */
+        p.setBrush(QColor(255, 255, 255, (m_dragging == i) ? 28 : 16));
         p.setPen(Qt::NoPen);
         p.drawRoundedRect(boxRect, 6, 6);
 

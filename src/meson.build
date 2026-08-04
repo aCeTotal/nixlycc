@@ -1,5 +1,5 @@
 qt6 = import('qt6')
-qt6_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets'])
+qt6_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets', 'Network', 'Svg'])
 drm_dep = dependency('libdrm')
 
 hwdata_dep = dependency('hwdata', required: false)
@@ -23,6 +23,10 @@ sources = files(
   'page_usersettings.cpp',
   'page_monitors.cpp',
   'page_applications.cpp',
+  'apps/pkgindex.cpp',
+  'apps/icons.cpp',
+  'apps/iconfarm.cpp',
+  'apps/rowdelegate.cpp',
   'page_mousekeyboard.cpp',
   'page_shortcuts.cpp',
   'page_statusbar.cpp',

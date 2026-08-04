@@ -98,10 +98,8 @@ static void addDimmRows(SysInfoSection &s)
 {
     QProcess p;
     p.start("dmidecode", {"-t", "memory"});
-    if (!p.waitForFinished(1000) || p.exitCode() != 0) {
-        s.rows.append(SysInfoRow{"Modules", "Unavailable (DMI data requires root)"});
+    if (!p.waitForFinished(1000) || p.exitCode() != 0)
         return;
-    }
     const QStringList blocks = QString::fromUtf8(p.readAllStandardOutput()).split("Memory Device");
     auto field = [](const QString &block, const QString &name) {
         const QStringList lines = block.split('\n');

@@ -26,6 +26,7 @@
           buildInputs = [
             pkgs.qt6.qtbase
             pkgs.qt6.qtwayland
+            pkgs.qt6.qtsvg   # icon index resolves .svg icons from the store
             pkgs.libdrm
             pkgs.hwdata
           ];
