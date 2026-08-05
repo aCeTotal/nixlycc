@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QCommandLineParser>
+#include "git/repo.h"
 #include "mainwindow.h"
 
 int main(int argc, char *argv[])
@@ -20,5 +21,11 @@ int main(int argc, char *argv[])
     MainWindow window(parser.value(pageOption));
     window.show();
 
-    return app.exec();
+    const int code = app.exec();
+
+    /* Whatever the session changed in ~/.nixlyos goes to the remote on the way
+     * out, so closing nixlycc never leaves the configuration behind. */
+    commitAndPush("nixlycc: settings");
+
+    return code;
 }

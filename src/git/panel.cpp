@@ -3,11 +3,13 @@
 #include "module.h"
 #include "rebuild.h"
 #include "repo.h"
+#include "services.h"
 #include "style.h"
 #include "task.h"
 
 #include <QCheckBox>
 #include <QClipboard>
+#include <QComboBox>
 #include <QFrame>
 #include <QGridLayout>
 #include <QGuiApplication>
@@ -30,6 +32,14 @@ QString prefill(const QString &fromModule, const QString &fromConfig)
     return fromModule.isEmpty() ? fromConfig : fromModule;
 }
 
+QStringList serviceNames()
+{
+    QStringList names;
+    for (const GitService &service : gitServices())
+        names << service.name;
+    return names;
+}
+
 } // namespace
 
 GitPanel::GitPanel(const QByteArray &password) : m_password(password)
@@ -45,7 +55,6 @@ GitPanel::GitPanel(const QByteArray &password) : m_password(password)
     buildIdentity(layout);
     buildKey(layout);
     buildRepo(layout);
-    buildSystem(layout);
     buildAutomation(layout);
     layout->addStretch();
 
@@ -55,6 +64,9 @@ GitPanel::GitPanel(const QByteArray &password) : m_password(password)
     scroll->viewport()->setAutoFillBackground(false);
     scroll->setWidget(content);
     outer->addWidget(scroll);
+
+    serviceChanged();
+    connect(m_service, &QComboBox::currentIndexChanged, this, &GitPanel::serviceChanged);
 }
 
 GitPanel::~GitPanel()
@@ -64,7 +76,12 @@ GitPanel::~GitPanel()
 
 bool GitPanel::busy() const
 {
-    return !m_createButton->isEnabled() || !m_applyButton->isEnabled();
+    return !m_createButton->isEnabled() || !m_generateButton->isEnabled();
+}
+
+const GitService &GitPanel::service() const
+{
+    return gitServices()[m_service->currentIndex()];
 }
 
 void GitPanel::buildIdentity(QVBoxLayout *layout)
@@ -77,12 +94,16 @@ void GitPanel::buildIdentity(QVBoxLayout *layout)
     grid->setColumnMinimumWidth(0, 130);
     grid->setColumnStretch(1, 1);
 
+    m_service = makeCombo(serviceNames());
+    m_service->setCurrentIndex(serviceIndexForHost(moduleHost()));
     m_name = makeField("Your name", prefill(moduleName(), gitConfigValue("user.name")));
     m_email = makeField("you@example.com", prefill(moduleEmail(), gitConfigValue("user.email")));
-    grid->addWidget(makeFieldLabel("Name"), 0, 0);
-    grid->addWidget(m_name, 0, 1);
-    grid->addWidget(makeFieldLabel("Email"), 1, 0);
-    grid->addWidget(m_email, 1, 1);
+    grid->addWidget(makeFieldLabel("Service"), 0, 0);
+    grid->addWidget(m_service, 0, 1);
+    grid->addWidget(makeFieldLabel("Name"), 1, 0);
+    grid->addWidget(m_name, 1, 1);
+    grid->addWidget(makeFieldLabel("Email"), 2, 0);
+    grid->addWidget(m_email, 2, 1);
     layout->addLayout(grid);
     layout->addSpacing(16);
 }
@@ -91,15 +112,14 @@ void GitPanel::buildKey(QVBoxLayout *layout)
 {
     addSection(layout, "SSH key");
 
-    const QString key = moduleKey();
-    m_keyName = makeField("Key name", key.isEmpty() ? "github" : key);
-    auto *generateButton = makeButton("Generate SSH key");
+    m_keyName = makeField("Key name", moduleKey());
+    m_generateButton = makeButton("Generate SSH key");
 
     auto *row = new QHBoxLayout;
     row->setSpacing(10);
     row->addWidget(makeFieldLabel("Key name"));
     row->addWidget(m_keyName, 1);
-    row->addWidget(generateButton);
+    row->addWidget(m_generateButton);
     layout->addLayout(row);
 
     m_keyBox = new QPlainTextEdit;
@@ -121,9 +141,8 @@ void GitPanel::buildKey(QVBoxLayout *layout)
     layout->addLayout(copyRow);
     layout->addSpacing(16);
 
-    showKey();
     connect(m_keyName, &QLineEdit::textChanged, this, &GitPanel::showKey);
-    connect(generateButton, &QPushButton::clicked, this, &GitPanel::generate);
+    connect(m_generateButton, &QPushButton::clicked, this, &GitPanel::generate);
     connect(m_copyButton, &QPushButton::clicked, this, [this]() {
         QGuiApplication::clipboard()->setText(m_keyBox->toPlainText());
         m_keyStatus->setText("Public key copied to clipboard.");
@@ -138,7 +157,7 @@ void GitPanel::buildRepo(QVBoxLayout *layout)
     pathLabel->setStyleSheet("color: #f0f0f2; font-size: 13px;");
     layout->addWidget(pathLabel);
 
-    m_url = makeField("git@github.com:user/.nixlyos.git", repoRemote());
+    m_url = makeField(QString(), repoRemote());
     m_createButton = makeButton("Create git nixlyOS-repo");
 
     auto *row = new QHBoxLayout;
@@ -149,35 +168,11 @@ void GitPanel::buildRepo(QVBoxLayout *layout)
     layout->addLayout(row);
 
     m_repoStatus = makeStatus();
+    m_repoStatus->setText("An https URL is converted to SSH before pushing.");
     layout->addWidget(m_repoStatus);
     layout->addSpacing(16);
 
     connect(m_createButton, &QPushButton::clicked, this, &GitPanel::createRepository);
-}
-
-void GitPanel::buildSystem(QVBoxLayout *layout)
-{
-    addSection(layout, "System configuration");
-
-    const QString host = moduleHost();
-    m_host = makeField("github.com", host.isEmpty() ? "github.com" : host);
-    m_applyButton = makeButton("Apply & rebuild");
-
-    auto *row = new QHBoxLayout;
-    row->setSpacing(10);
-    row->addWidget(makeFieldLabel("SSH host"));
-    row->addWidget(m_host, 1);
-    row->addWidget(m_applyButton);
-    layout->addLayout(row);
-
-    m_systemStatus = makeStatus();
-    m_systemStatus->setText(QString("Writes %1 and switches the system so ~/.ssh/config "
-                                    "and the git identity take effect immediately.")
-                                .arg(modulePath()));
-    layout->addWidget(m_systemStatus);
-    layout->addSpacing(16);
-
-    connect(m_applyButton, &QPushButton::clicked, this, &GitPanel::applyAndRebuild);
 }
 
 void GitPanel::buildAutomation(QVBoxLayout *layout)
@@ -204,6 +199,21 @@ void GitPanel::buildAutomation(QVBoxLayout *layout)
     });
 }
 
+/* Key name and the repository URL hint follow the selected service; a key name
+ * the user typed is left alone. */
+void GitPanel::serviceChanged()
+{
+    const QString key = m_keyName->text().trimmed();
+    bool fromService = key.isEmpty();
+    for (const GitService &other : gitServices())
+        fromService = fromService || key == other.slug;
+    if (fromService)
+        m_keyName->setText(service().slug);
+
+    m_url->setPlaceholderText(service().urlHint);
+    showKey();
+}
+
 void GitPanel::showKey()
 {
     const QString name = m_keyName->text().trimmed();
@@ -212,37 +222,79 @@ void GitPanel::showKey()
     m_copyButton->setEnabled(!pub.isEmpty());
     m_keyStatus->setText(pub.isEmpty()
                              ? QString("No key at ~/.ssh/%1").arg(name)
-                             : QString("Paste this into GitHub → Settings → SSH and GPG keys."));
+                             : QString("Paste this into %1.").arg(service().keyPage));
 }
 
+/* Generating a key is also what deploys the identity: the module is rewritten
+ * for the new key and service and the system is switched right away, so
+ * ~/.ssh/config and the git identity match the key before it is even pasted. */
 void GitPanel::generate()
 {
-    const QString name = m_keyName->text().trimmed();
-    if (name.isEmpty()) {
-        m_keyStatus->setText("Enter a key name first.");
+    const QString name = m_name->text().trimmed();
+    const QString email = m_email->text().trimmed();
+    const QString key = m_keyName->text().trimmed();
+    if (name.isEmpty() || email.isEmpty() || key.isEmpty()) {
+        m_keyStatus->setText("Fill in name, email and key name first.");
         return;
     }
-    if (keyExists(name)
+    if (keyExists(key)
         && QMessageBox::question(this, "Replace key",
-                                 QString("~/.ssh/%1 already exists. Replace it?").arg(name))
+                                 QString("~/.ssh/%1 already exists. Replace it?").arg(key))
             != QMessageBox::Yes)
         return;
 
-    const QString error = generateKey(name, m_email->text().trimmed());
+    const QString error = generateKey(key, email);
     showKey();
-    if (!error.isEmpty())
+    if (!error.isEmpty()) {
         m_keyStatus->setText(error);
-    else
-        m_keyStatus->setText("Key created. Copy it to GitHub, then press Apply & rebuild.");
+        return;
+    }
+    applyModule();
+}
+
+void GitPanel::applyModule()
+{
+    const QString error = writeModule(m_name->text().trimmed(), m_email->text().trimmed(),
+                                      service().host, m_keyName->text().trimmed());
+    if (!error.isEmpty()) {
+        m_keyStatus->setText(error);
+        return;
+    }
+
+    m_generateButton->setEnabled(false);
+    m_keyStatus->setText("Rebuilding…");
+
+    QPointer<GitPanel> self(this);
+    const QByteArray password = m_password;
+    const QString keyPage = service().keyPage;
+    runAsync(
+        [password, self]() {
+            return rebuildSwitch(password, [self](const QString &line) {
+                postToGui([self, line]() {
+                    if (self)
+                        self->m_keyStatus->setText(line);
+                });
+            });
+        },
+        [self, keyPage](const QString &error) {
+            if (!self)
+                return;
+            self->m_generateButton->setEnabled(true);
+            self->m_keyStatus->setText(
+                error.isEmpty()
+                    ? QString("Key created and applied — paste it into %1.").arg(keyPage)
+                    : error);
+        });
 }
 
 void GitPanel::createRepository()
 {
-    const QString url = m_url->text().trimmed();
+    const QString url = toSshUrl(m_url->text().trimmed());
     if (url.isEmpty()) {
         m_repoStatus->setText("Enter the repository URL first.");
         return;
     }
+    m_url->setText(url);
 
     m_createButton->setEnabled(false);
     m_repoStatus->setText("Creating and pushing…");
@@ -258,47 +310,4 @@ void GitPanel::createRepository()
                  self->m_repoStatus->setText(
                      error.isEmpty() ? QString("%1 pushed to %2").arg(repoPath(), url) : error);
              });
-}
-
-/* Writes the home-manager module and switches the system right away, so the
- * new ~/.ssh/config and git identity are live without a manual rebuild. */
-void GitPanel::applyAndRebuild()
-{
-    const QString name = m_name->text().trimmed();
-    const QString email = m_email->text().trimmed();
-    const QString host = m_host->text().trimmed();
-    const QString key = m_keyName->text().trimmed();
-    if (name.isEmpty() || email.isEmpty() || host.isEmpty() || key.isEmpty()) {
-        m_systemStatus->setText("Fill in name, email, SSH host and key name first.");
-        return;
-    }
-
-    const QString error = writeModule(name, email, host, key);
-    if (!error.isEmpty()) {
-        m_systemStatus->setText(error);
-        return;
-    }
-
-    m_applyButton->setEnabled(false);
-    m_systemStatus->setText("Rebuilding…");
-
-    QPointer<GitPanel> self(this);
-    const QByteArray password = m_password;
-    runAsync(
-        [password, self]() {
-            return rebuildSwitch(password, [self](const QString &line) {
-                postToGui([self, line]() {
-                    if (self)
-                        self->m_systemStatus->setText(line);
-                });
-            });
-        },
-        [self](const QString &error) {
-            if (!self)
-                return;
-            self->m_applyButton->setEnabled(true);
-            self->m_systemStatus->setText(error.isEmpty()
-                                              ? "Applied — ~/.ssh/config and git identity are live."
-                                              : error);
-        });
 }

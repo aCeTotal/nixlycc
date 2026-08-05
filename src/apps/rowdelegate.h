@@ -4,7 +4,8 @@
 
 class IconIndex;
 
-/* Two-line search result: icon, attribute path with version, description. */
+/* Two-line search result: icon, attribute path with version, description, and
+ * a tick box on the right showing whether the package is in packages.nix. */
 class PkgRowDelegate : public QStyledItemDelegate {
 public:
     enum Role {
@@ -12,6 +13,7 @@ public:
         VersionRole,
         PnameRole,
         NixlyRole,
+        InstalledRole,
     };
 
     explicit PkgRowDelegate(const IconIndex *icons, QObject *parent = nullptr);

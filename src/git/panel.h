@@ -3,11 +3,14 @@
 #include <QByteArray>
 #include <QWidget>
 
+class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QVBoxLayout;
+
+struct GitService;
 
 /* Everything behind the password prompt. Built on unlock and destroyed on
  * lock, so no key material, remote URL or password survives a lock.
@@ -27,27 +30,27 @@ private:
     void buildIdentity(QVBoxLayout *layout);
     void buildKey(QVBoxLayout *layout);
     void buildRepo(QVBoxLayout *layout);
-    void buildSystem(QVBoxLayout *layout);
     void buildAutomation(QVBoxLayout *layout);
 
+    const GitService &service() const;
+    void serviceChanged();
     void showKey();
     void generate();
+    void applyModule();
     void createRepository();
-    void applyAndRebuild();
 
     QByteArray m_password;
 
+    QComboBox *m_service;
     QLineEdit *m_name;
     QLineEdit *m_email;
     QLineEdit *m_keyName;
-    QLineEdit *m_host;
     QLineEdit *m_url;
     QPlainTextEdit *m_keyBox;
     QPushButton *m_copyButton;
+    QPushButton *m_generateButton;
     QPushButton *m_createButton;
-    QPushButton *m_applyButton;
     QLabel *m_keyStatus;
     QLabel *m_repoStatus;
-    QLabel *m_systemStatus;
     QLabel *m_autoStatus;
 };

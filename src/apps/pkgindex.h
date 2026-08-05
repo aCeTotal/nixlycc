@@ -36,6 +36,10 @@ public:
     int count() const { return (int)m_pkgs.size(); }
     std::vector<const Pkg *> search(const QString &query, int limit) const;
 
+    /* The entry with this attribute path, or nullptr — used to put a
+     * description on an installed package. */
+    const Pkg *find(const QString &attr) const;
+
     /* The nixpkgs store path the entries came from — also IconFarm's refarm
      * key, since new packages arrive with a new nixpkgs. */
     QString stamp() const { return m_stamp; }
@@ -52,6 +56,7 @@ private:
     void writeCache() const;
 
     std::vector<Pkg> m_pkgs;
+    QString m_nixpkgs;    /* the flake's nixpkgs input, or a channel path */
     QString m_stamp;      /* nixpkgs store path — the cache validity key */
     bool m_ready = false;
     std::function<void(const QString &)> m_onStatus;

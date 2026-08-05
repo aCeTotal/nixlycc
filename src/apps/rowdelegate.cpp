@@ -37,6 +37,21 @@ void PkgRowDelegate::paint(QPainter *p, const QStyleOptionViewItem &option,
     const int textLeft = iconRect.right() + 14;
     int textRight = r.right() - 10;
 
+    /* Tick box on the far right — filled once the package is in the list. */
+    const bool installed = index.data(InstalledRole).toBool();
+    const QRect tick(textRight - 22, r.top() + 18, 22, 22);
+    p->setPen(QPen(QColor(installed ? 122 : 255, installed ? 162 : 255,
+                          installed ? 247 : 255, installed ? 200 : 60), 1.5));
+    p->setBrush(installed ? QColor(122, 162, 247, 90) : QColor(255, 255, 255, 10));
+    p->drawRoundedRect(tick, 6, 6);
+    if (installed) {
+        p->setPen(QPen(QColor(240, 240, 242), 2));
+        p->drawLine(tick.left() + 6, tick.center().y(), tick.center().x(), tick.bottom() - 6);
+        p->drawLine(tick.center().x(), tick.bottom() - 6, tick.right() - 5, tick.top() + 6);
+    }
+    p->setBrush(Qt::NoBrush);
+    textRight = tick.left() - 12;
+
     /* Version sits flush right on the first line. */
     QFont small = option.font;
     small.setPointSize(9);
@@ -80,7 +95,7 @@ void PkgRowDelegate::paint(QPainter *p, const QStyleOptionViewItem &option,
     if (!desc.isEmpty()) {
         p->setFont(small);
         p->setPen(QColor(139, 143, 154));
-        const QRect descRect(textLeft, r.top() + 30, r.right() - 10 - textLeft, 18);
+        const QRect descRect(textLeft, r.top() + 30, tick.left() - 12 - textLeft, 18);
         p->drawText(descRect, Qt::AlignLeft | Qt::AlignVCenter,
                     QFontMetrics(small).elidedText(desc, Qt::ElideRight, descRect.width()));
     }

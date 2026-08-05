@@ -1,4 +1,5 @@
 #include "pkgindex.h"
+#include "flake.h"
 
 #include <QDir>
 #include <QFile>
@@ -15,13 +16,15 @@
 
 /* ── Paths ───────────────────────────────────────────────────────── */
 
-/* NIX_PATH carries the nixpkgs the user's system actually evaluates; the root
- * channel is the fallback for setups that don't export it. */
-static QString nixpkgsPath()
+/* Fallback for a machine without the nixlyOS flake: a real path out of
+ * NIX_PATH, then the root channel. On a flake system NIX_PATH says
+ * "nixpkgs=flake:nixpkgs", which nix-env cannot enumerate — hence the entries
+ * that start with a slash only. */
+static QString channelNixpkgsPath()
 {
     const QString nixPath = qEnvironmentVariable("NIX_PATH");
     for (const QString &part : nixPath.split(':', Qt::SkipEmptyParts)) {
-        if (part.startsWith("nixpkgs="))
+        if (part.startsWith("nixpkgs=/"))
             return part.mid(8);
     }
     const QString channel = "/nix/var/nix/profiles/per-user/root/channels/nixos";
@@ -75,13 +78,20 @@ void PkgIndex::load(std::function<void(const QString &)> onStatus,
 {
     m_onStatus = std::move(onStatus);
     m_onReady = std::move(onReady);
-    m_stamp = QFileInfo(nixpkgsPath()).canonicalFilePath();
 
-    if (readCache()) {
-        finish();
-        return;
-    }
-    startBuild();
+    if (m_onStatus)
+        m_onStatus("Locating nixpkgs…");
+
+    flakeInputPath("nixpkgs", [this](const QString &path) {
+        m_nixpkgs = path.isEmpty() ? channelNixpkgsPath() : path;
+        m_stamp = QFileInfo(m_nixpkgs).canonicalFilePath();
+
+        if (readCache()) {
+            finish();
+            return;
+        }
+        startBuild();
+    });
 }
 
 bool PkgIndex::readCache()
@@ -140,10 +150,10 @@ void PkgIndex::writeCache() const
  * so the split is unambiguous. */
 void PkgIndex::startBuild()
 {
-    const QString nixpkgs = nixpkgsPath();
+    const QString nixpkgs = m_nixpkgs;
     if (nixpkgs.isEmpty()) {
         if (m_onStatus)
-            m_onStatus("No nixpkgs found — set NIX_PATH or add the nixos channel.");
+            m_onStatus("No nixpkgs found — is ~/.nixlyos a flake?");
         return;
     }
 
@@ -231,6 +241,15 @@ QStringList PkgIndex::iconKeys() const
             keys.insert(attr.mid(dot + 1));
     }
     return QStringList(keys.begin(), keys.end());
+}
+
+const Pkg *PkgIndex::find(const QString &attr) const
+{
+    for (const Pkg &p : m_pkgs) {
+        if (p.attr == attr)
+            return &p;
+    }
+    return nullptr;
 }
 
 /* ── Search ──────────────────────────────────────────────────────── */

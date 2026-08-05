@@ -1,19 +1,13 @@
 #include "pages.h"
-#include <QWidget>
-#include <QVBoxLayout>
-#include <QLabel>
+#include "ui/lockpage.h"
+#include "users/panel.h"
 
 QWidget *createUserSettingsPage()
 {
-    auto *page = new QWidget;
-    auto *layout = new QVBoxLayout(page);
-    auto *title = new QLabel("User Settings");
-    title->setStyleSheet("color: white; font-size: 24px; font-weight: bold; margin-bottom: 20px;");
-    layout->addWidget(title);
-    auto *body = new QLabel("User settings and configuration options will appear here.");
-    body->setStyleSheet("color: #cccccc; font-size: 16px;");
-    body->setWordWrap(true);
-    layout->addWidget(body);
-    layout->addStretch();
-    return page;
+    return new LockPage(
+        "User Settings",
+        "Enter your user password to rename accounts, change passwords and add users. "
+        "Three wrong passwords lock the page for five minutes.",
+        [](const QByteArray &password) -> QWidget * { return new UserPanel(password); },
+        [](QWidget *panel) { return static_cast<UserPanel *>(panel)->busy(); });
 }

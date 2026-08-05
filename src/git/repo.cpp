@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QTextStream>
 
@@ -53,6 +54,16 @@ QString repoRemote()
     return out;
 }
 
+QString toSshUrl(const QString &url)
+{
+    static const QRegularExpression form(
+        R"(^(?:https?|ssh|git)://(?:[^@/]+@)?([^/:]+)(?::\d+)?/(.+)$)");
+    const QRegularExpressionMatch match = form.match(url.trimmed());
+    if (!match.hasMatch())
+        return url.trimmed();
+    return QString("git@%1:%2").arg(match.captured(1), match.captured(2));
+}
+
 QString gitConfigValue(const QString &key)
 {
     QString out;
@@ -61,8 +72,9 @@ QString gitConfigValue(const QString &key)
     return out;
 }
 
-QString createRepo(const QString &url, const QString &name, const QString &email)
+QString createRepo(const QString &rawUrl, const QString &name, const QString &email)
 {
+    const QString url = toSshUrl(rawUrl);
     const QString dir = repoPath();
     if (!QDir().mkpath(dir))
         return QString("Could not create %1").arg(dir);
@@ -87,6 +99,38 @@ QString createRepo(const QString &url, const QString &name, const QString &email
         return out;
 
     if (git({ "push", "-u", "origin", "HEAD" }, dir, &out) != 0)
+        return out;
+    return QString();
+}
+
+QString stageFile(const QString &path)
+{
+    const QString dir = repoPath();
+    if (!QFileInfo::exists(dir + "/.git"))
+        return QString();
+
+    QString out;
+    if (git({ "add", "--", path }, dir, &out) != 0)
+        return out;
+    return QString();
+}
+
+QString commitAndPush(const QString &message)
+{
+    const QString dir = repoPath();
+    if (!QFileInfo::exists(dir + "/.git"))
+        return QString();
+
+    QString out;
+    if (git({ "add", "-A" }, dir, &out) != 0)
+        return out;
+    if (git({ "diff", "--cached", "--quiet" }, dir, nullptr) == 0)
+        return QString();
+    if (git({ "commit", "-m", message }, dir, &out) != 0)
+        return out;
+    if (git({ "remote", "get-url", "origin" }, dir, nullptr) != 0)
+        return QString();
+    if (git({ "push", "origin", "HEAD" }, dir, &out) != 0)
         return out;
     return QString();
 }
