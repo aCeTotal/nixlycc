@@ -12,6 +12,7 @@ QWidget *createStatusbarPage();
 QWidget *createNeovimPage();
 QWidget *createStoragePage();
 QWidget *createFirewallPage();
+QWidget *createGitPage();
 QWidget *createBackupPage();
 QWidget *createGamingPage();
 QWidget *createWinVMPage();

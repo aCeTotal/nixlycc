@@ -337,6 +337,10 @@ void MonitorSetupWidget::loadConfig()
                     found->transform = 3;
                 }
             }
+            /* mirror=NAME */
+            else if (tok.startsWith("mirror=")) {
+                found->mirror_of = tok.mid(7).toStdString();
+            }
         }
     }
 
@@ -380,6 +384,9 @@ void MonitorSetupWidget::writeConfig()
             out << " transform=rotate-90";
         else if (e.transform == 3)
             out << " transform=rotate-270";
+
+        if (!e.mirror_of.empty())
+            out << " mirror=" << QString::fromStdString(e.mirror_of);
 
         out << "\n";
     }
@@ -590,6 +597,7 @@ void MonitorSetupWidget::snapshotSavedState()
         s.transform = e.transform;
         s.grid_col = e.grid_col;
         s.grid_row = e.grid_row;
+        s.mirror_of = e.mirror_of;
         m_savedState.push_back(s);
     }
 }
@@ -607,7 +615,8 @@ bool MonitorSetupWidget::hasUnsavedChanges() const
         auto &s = m_savedState[i];
         if (e.name != s.name || e.width != s.width || e.height != s.height ||
             e.transform != s.transform || e.grid_col != s.grid_col ||
-            e.grid_row != s.grid_row || std::fabs(e.refresh - s.refresh) > 0.5f)
+            e.grid_row != s.grid_row || e.mirror_of != s.mirror_of ||
+            std::fabs(e.refresh - s.refresh) > 0.5f)
             return true;
     }
     return false;
@@ -794,6 +803,37 @@ void MonitorSetupWidget::showContextMenu(int idx, const QPoint &pos)
         int rate = rates[ri];
         rateMenu->addAction(label, [this, idx, rate]() {
             m_entries[idx].refresh = (float)rate / 1000.0f;
+            update();
+        });
+    }
+
+    /* Mirror submenu — "None" is the default, the rest are the other
+     * connectors. Mirroring means nixlytile places this output at the same
+     * layout position as the source, so both scan out the same picture. */
+    QMenu *mirrorMenu = menu.addMenu("Mirror");
+    mirrorMenu->addAction(QString("%1None").arg(e.mirror_of.empty() ? "> " : "  "),
+                          [this, idx]() {
+                              m_entries[idx].mirror_of.clear();
+                              update();
+                          });
+
+    for (int mi = 0; mi < (int)m_entries.size(); mi++) {
+        if (mi == idx)
+            continue;
+        auto &src = m_entries[mi];
+        bool current = (e.mirror_of == src.name);
+        QString label = QString("%1%2 (%3)")
+                            .arg(current ? "> " : "  ")
+                            .arg(gridMakeLabel(mi))
+                            .arg(QString::fromStdString(src.name));
+
+        std::string srcName = src.name;
+        mirrorMenu->addAction(label, [this, idx, srcName]() {
+            m_entries[idx].mirror_of = srcName;
+            /* No cycles: a source cannot mirror the screen mirroring it. */
+            for (auto &other : m_entries)
+                if (other.name == srcName && other.mirror_of == m_entries[idx].name)
+                    other.mirror_of.clear();
             update();
         });
     }

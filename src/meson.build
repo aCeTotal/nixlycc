@@ -1,6 +1,7 @@
 qt6 = import('qt6')
 qt6_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets', 'Network', 'Svg'])
 drm_dep = dependency('libdrm')
+pam_dep = dependency('pam')
 
 hwdata_dep = dependency('hwdata', required: false)
 if hwdata_dep.found()
@@ -33,6 +34,15 @@ sources = files(
   'page_neovim.cpp',
   'page_storage.cpp',
   'page_firewall.cpp',
+  'page_git.cpp',
+  'git/auth.cpp',
+  'git/keys.cpp',
+  'git/module.cpp',
+  'git/panel.cpp',
+  'git/rebuild.cpp',
+  'git/repo.cpp',
+  'git/style.cpp',
+  'git/task.cpp',
   'page_backup.cpp',
   'page_gaming.cpp',
   'page_winvm.cpp',
@@ -41,6 +51,6 @@ sources = files(
 
 executable('nixlycc',
   sources,
-  dependencies: [qt6_dep, drm_dep],
+  dependencies: [qt6_dep, drm_dep, pam_dep],
   install: true,
 )

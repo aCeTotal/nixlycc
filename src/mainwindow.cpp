@@ -46,6 +46,7 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
     menu->addItem("Neovim IDE");
     menu->addItem("Storage & Sharing");
     menu->addItem("Firewall & Security");
+    menu->addItem("Git");
     menu->addItem("Backup");
     menu->addItem("Gaming");
     menu->addItem("WinVM Settings");
@@ -66,6 +67,7 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
     stack->addWidget(createNeovimPage());
     stack->addWidget(createStoragePage());
     stack->addWidget(createFirewallPage());
+    stack->addWidget(createGitPage());
     stack->addWidget(createBackupPage());
     stack->addWidget(createGamingPage());
     stack->addWidget(createWinVMPage());

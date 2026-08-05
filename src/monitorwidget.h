@@ -15,6 +15,7 @@ struct MonitorEntry {
     float refresh = 60.0f;
     int transform = 0;     /* 0=normal, 1=90, 2=180, 3=270 */
     int grid_col = 0, grid_row = 0;
+    std::string mirror_of; /* connector this one mirrors; empty = independent */
     std::vector<MonitorMode> modes;
 
     /* Animation state */
@@ -34,6 +35,7 @@ struct SavedMonitorState {
     float refresh = 60.0f;
     int transform = 0;
     int grid_col = 0, grid_row = 0;
+    std::string mirror_of;
 };
 
 class MonitorSetupWidget : public QWidget
