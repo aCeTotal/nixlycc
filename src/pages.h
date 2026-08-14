@@ -3,6 +3,7 @@
 class QWidget;
 
 QWidget *createSysInfoPage();
+QWidget *createUpgradePage();
 QWidget *createUserSettingsPage();
 QWidget *createMonitorsPage();
 QWidget *createApplicationsPage();

@@ -37,6 +37,7 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
         "QListWidget::item:selected { background-color: rgba(102, 179, 255, 90); }"
         "QListWidget::item:hover { background-color: rgba(255, 255, 255, 45); }");
     menu->addItem("System Information");
+    menu->addItem("Upgrade System");
     menu->addItem("User Settings");
     menu->addItem("Monitors");
     menu->addItem("Applications");
@@ -58,6 +59,7 @@ MainWindow::MainWindow(const QString &page, QWidget *parent) : QMainWindow(paren
 
     auto *stack = new QStackedWidget;
     stack->addWidget(createSysInfoPage());
+    stack->addWidget(createUpgradePage());
     stack->addWidget(createUserSettingsPage());
     stack->addWidget(createMonitorsPage());
     stack->addWidget(createApplicationsPage());
