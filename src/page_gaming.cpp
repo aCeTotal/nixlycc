@@ -1,4 +1,5 @@
 #include "pages.h"
+#include "gaming/pttbind.h"
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -10,10 +11,7 @@ QWidget *createGamingPage()
     auto *title = new QLabel("Gaming");
     title->setStyleSheet("color: white; font-size: 24px; font-weight: bold; margin-bottom: 20px;");
     layout->addWidget(title);
-    auto *body = new QLabel("Gaming settings and launcher configuration will appear here.");
-    body->setStyleSheet("color: #cccccc; font-size: 16px;");
-    body->setWordWrap(true);
-    layout->addWidget(body);
+    layout->addWidget(new PttBindWidget);
     layout->addStretch();
     return page;
 }
