@@ -70,7 +70,11 @@ sources = files(
   'git/task.cpp',
   'page_backup.cpp',
   'page_gaming.cpp',
+  'gaming/capture.cpp',
+  'gaming/conf.cpp',
+  'gaming/ptmlist.cpp',
   'gaming/pttbind.cpp',
+  'gaming/style.cpp',
   'page_winvm.cpp',
   'page_cleanup.cpp',
 )
