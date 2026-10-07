@@ -12,6 +12,34 @@ const QString kTalkBind = "ptt-bind=";
 const QString kTalkLabel = "ptt-label=";
 const QString kMuteBind = "ptm-bind=";
 const QString kMuteLabel = "ptm-label=";
+const QString kDynamicRender = "dynamic-render=";
+
+using Apply = void (*)(GamingConf &, const QString &);
+
+/* Each ptm-label follows its ptm-bind. */
+const struct {
+    const QString &key;
+    Apply apply;
+} kKeys[] = {
+    { kTalkBind, [](GamingConf &c, const QString &v) { c.talk.value = v; } },
+    { kTalkLabel, [](GamingConf &c, const QString &v) { c.talk.label = v; } },
+    { kMuteBind, [](GamingConf &c, const QString &v) { c.voipMute.append({v, QString()}); } },
+    { kMuteLabel, [](GamingConf &c, const QString &v) {
+        if (!c.voipMute.isEmpty())
+            c.voipMute.last().label = v;
+    } },
+    { kDynamicRender, [](GamingConf &c, const QString &v) { c.dynamicRender = v != "0"; } },
+};
+
+void applyLine(GamingConf &conf, const QString &line)
+{
+    for (const auto &k : kKeys) {
+        if (!line.startsWith(k.key))
+            continue;
+        k.apply(conf, line.mid(k.key.size()));
+        return;
+    }
+}
 
 void writeBind(QTextStream &out, const Bind &bind, const QString &key, const QString &labelKey)
 {
@@ -25,7 +53,6 @@ QString gamingConfPath()
     return QDir::homePath() + "/.local/nixlyos/gaming.conf";
 }
 
-/* Each ptm-label follows its ptm-bind. */
 GamingConf loadGamingConf()
 {
     GamingConf conf;
@@ -33,17 +60,8 @@ GamingConf loadGamingConf()
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return conf;
 
-    while (!file.atEnd()) {
-        const QString line = QString::fromUtf8(file.readLine()).trimmed();
-        if (line.startsWith(kTalkBind))
-            conf.talk.value = line.mid(kTalkBind.size());
-        else if (line.startsWith(kTalkLabel))
-            conf.talk.label = line.mid(kTalkLabel.size());
-        else if (line.startsWith(kMuteBind))
-            conf.voipMute.append({line.mid(kMuteBind.size()), QString()});
-        else if (line.startsWith(kMuteLabel) && !conf.voipMute.isEmpty())
-            conf.voipMute.last().label = line.mid(kMuteLabel.size());
-    }
+    while (!file.atEnd())
+        applyLine(conf, QString::fromUtf8(file.readLine()).trimmed());
     return conf;
 }
 
@@ -63,6 +81,7 @@ bool saveGamingConf(const GamingConf &conf)
         writeBind(out, conf.talk, kTalkBind, kTalkLabel);
     for (const Bind &bind : conf.voipMute)
         writeBind(out, bind, kMuteBind, kMuteLabel);
+    out << kDynamicRender << (conf.dynamicRender ? "1" : "0") << "\n";
     out.flush();
     return file.commit();
 }

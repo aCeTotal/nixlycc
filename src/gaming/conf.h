@@ -13,6 +13,7 @@ struct Bind {
 struct GamingConf {
     Bind talk;
     QList<Bind> voipMute;
+    bool dynamicRender = true;
 };
 
 GamingConf loadGamingConf();

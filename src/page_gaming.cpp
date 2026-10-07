@@ -1,6 +1,7 @@
 #include "pages.h"
 #include "gaming/pttbind.h"
 #include "gaming/ptmlist.h"
+#include "gaming/rendermode.h"
 #include "git/style.h"
 
 #include <QButtonGroup>
@@ -26,6 +27,16 @@ QWidget *createVoipPanel()
     return panel;
 }
 
+QWidget *createPerformancePanel()
+{
+    auto *panel = new QWidget;
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(0, 10, 0, 0);
+    layout->addWidget(new RenderModeWidget);
+    layout->addStretch();
+    return panel;
+}
+
 } // namespace
 
 QWidget *createGamingPage()
@@ -40,7 +51,7 @@ QWidget *createGamingPage()
 
     auto *stack = new QStackedWidget;
     stack->addWidget(createVoipPanel());
-    stack->addWidget(new QWidget);
+    stack->addWidget(createPerformancePanel());
 
     auto *group = new QButtonGroup(page);
     auto *tabs = new QHBoxLayout;

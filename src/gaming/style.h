@@ -5,7 +5,7 @@
 class QLabel;
 class QPushButton;
 
-/* Shared look for the VOIP bind editors. */
+/* Shared look for gaming panels. */
 QLabel *makeHeading(const QString &text);
 QLabel *makeHint(const QString &text);
 QLabel *makeBindChip();

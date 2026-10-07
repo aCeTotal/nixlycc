@@ -51,3 +51,7 @@ Makefile*
 result
 result-*
 .direnv/
+
+# Caches and agent files
+.cache/
+.claude/
